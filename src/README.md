@@ -1,4 +1,4 @@
-# DDbgMon
+# DDbgMon (Dual Debug Monitor)
 
 ![Screenshot](screenshot.png)
 
