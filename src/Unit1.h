@@ -30,9 +30,13 @@ __published:	// IDE で管理されるコンポーネント
 	TAction *ClearLogAction;
 	TAction *Close2Action;
 	TAction *CloseAction;
+	TAction *EndOfLog1Action;
+	TAction *EndOfLog2Action;
 	TAction *Find2Action;
 	TAction *FindAction;
 	TAction *PauseAction;
+	TAction *ReMatch1Action;
+	TAction *ReMatch2Action;
 	TAction *SaveLog2Action;
 	TAction *SaveLogAction;
 	TAction *StartAction;
@@ -40,20 +44,26 @@ __published:	// IDE で管理されるコンポーネント
 	TAction *Terminate2Action;
 	TAction *TerminateAction;
 	TAction *TopMostAction;
+	TAction *TopOfLog1Action;
+	TAction *TopOfLog2Action;
 	TActionList *ActionList1;
 	TButton *Button1;
 	TButton *Button2;
 	TButton *Button3;
+	TButton *RefSndWatchBtn;
 	TButton *SearchBtn1;
 	TButton *SearchBtn2;
+	TButton *TestSndWatchBtn;
 	TCheckBox *TopMostCheckBox;
 	TColorDialog *ColorDialog1;
 	TComboBox *MatchComboBox1;
 	TComboBox *MatchComboBox2;
+	TEdit *SndMatchEdit;
 	TGroupBox *ColorGroupBox;
-	TGroupBox *PtnGroupBox;
 	TGroupBox *GroupBox1;
 	TGroupBox *GroupBox2;
+	TGroupBox *PtnGroupBox;
+	TGroupBox *SndWatchGroupBox;
 	TImage *CapToolImage1;
 	TImage *CapToolImage2;
 	TImageList *ImageList1;
@@ -76,15 +86,20 @@ __published:	// IDE で管理されるコンポーネント
 	TListBox *LogListBox2;
 	TListBox *MatchListBox1;
 	TListBox *MatchListBox2;
+	TOpenDialog *OpenDialog1;
 	TPageControl *PageControl1;
 	TPanel *LogPanel1;
 	TPanel *LogPanel2;
 	TPanel *MatchPanel1;
 	TPanel *MatchPanel2;
 	TPanel *OpePanel;
+	TPanel *Panel1;
+	TPanel *Panel2;
 	TPanel *TargetPanel1;
 	TPanel *TargetPanel2;
 	TSaveDialog *SaveDialog1;
+	TSpeedButton *SpeedButton1;
+	TSpeedButton *SpeedButton2;
 	TSplitter *Splitter1;
 	TSplitter *Splitter2;
 	TSplitter *Splitter3;
@@ -93,6 +108,8 @@ __published:	// IDE で管理されるコンポーネント
 	TTimer *Timer1;
 	TToolBar *ToolBar1;
 	TToolBar *ToolBar2;
+	TToolButton *ToolButton1;
+	TToolButton *ToolButton2;
 	TToolButton *ToolButton3;
 	TToolButton *ToolButton4;
 	TToolButton *ToolButton5;
@@ -103,23 +120,11 @@ __published:	// IDE で管理されるコンポーネント
 	TToolButton *ToolButton10;
 	TToolButton *ToolButton11;
 	TToolButton *ToolButton12;
-	TTrackBar *TransBar;
-	TAction *EndOfLog1Action;
-	TAction *EndOfLog2Action;
-	TToolButton *ToolButton1;
-	TToolButton *ToolButton2;
-	TAction *TopOfLog2Action;
-	TAction *TopOfLog1Action;
 	TToolButton *ToolButton13;
 	TToolButton *ToolButton14;
 	TToolButton *ToolButton15;
 	TToolButton *ToolButton16;
-	TPanel *Panel1;
-	TSpeedButton *SpeedButton1;
-	TAction *ReMatch1Action;
-	TAction *ReMatch2Action;
-	TPanel *Panel2;
-	TSpeedButton *SpeedButton2;
+	TTrackBar *TransBar;
 
 	void __fastcall FormCreate(TObject *Sender);
 	void __fastcall FormShow(TObject *Sender);
@@ -153,16 +158,18 @@ __published:	// IDE で管理されるコンポーネント
 	void __fastcall SaveLogActionUpdate(TObject *Sender);
 	void __fastcall ClearLogActionExecute(TObject *Sender);
 	void __fastcall ClearLogActionUpdate(TObject *Sender);
+	void __fastcall TopOfLogActionExecute(TObject *Sender);
+	void __fastcall TopOfLogActionUpdate(TObject *Sender);
+	void __fastcall EndOfLogActionExecute(TObject *Sender);
+	void __fastcall EndOfLogActionUpdate(TObject *Sender);
+	void __fastcall ReMatchActionExecute(TObject *Sender);
+	void __fastcall ReMatchActionUpdate(TObject *Sender);
 	void __fastcall TransBarChange(TObject *Sender);
 	void __fastcall TopMostActionExecute(TObject *Sender);
 	void __fastcall ColorListBoxDrawItem(TWinControl *Control, int Index, TRect &Rect, TOwnerDrawState State);
 	void __fastcall ColorListBoxDblClick(TObject *Sender);
-	void __fastcall EndOfLogActionExecute(TObject *Sender);
-	void __fastcall EndOfLogActionUpdate(TObject *Sender);
-	void __fastcall TopOfLogActionExecute(TObject *Sender);
-	void __fastcall TopOfLogActionUpdate(TObject *Sender);
-	void __fastcall ReMatchActionExecute(TObject *Sender);
-	void __fastcall ReMatchActionUpdate(TObject *Sender);
+	void __fastcall RefSndWatchBtnClick(TObject *Sender);
+	void __fastcall TestSndWatchBtnClick(TObject *Sender);
 
 private:	// ユーザー宣言
 	TIniFile *IniFile;
@@ -189,6 +196,8 @@ private:	// ユーザー宣言
 
 	TStringList *LogBuffer;
 	TStringList *LogBuffer2;
+
+	UnicodeString SoundMatched;
 
 	void __fastcall SetEditColor(TLabeledEdit *ep)
 	{

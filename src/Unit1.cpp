@@ -58,6 +58,7 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 	Em3Edit->Text      = IniFile->ReadString( sct, "EmMatchStr3",	EmptyStr);
 	Em4Edit->Text      = IniFile->ReadString( sct, "EmMatchStr4",	EmptyStr);
 	ExlcudeEdit->Text  = IniFile->ReadString( sct, "ExcludePtn",	"recv msg;attach;detach");
+	SndMatchEdit->Text = IniFile->ReadString( sct, "SoundMatched",	EmptyStr);
 
 	sct = "Color";
 	col_fgEm1  = (TColor)IniFile->ReadInteger(sct, "fgEm1",	0x33cc33);
@@ -119,6 +120,7 @@ void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
 	IniFile->WriteString( sct, "EmMatchStr3",	Em3Edit->Text);
 	IniFile->WriteString( sct, "EmMatchStr4",	Em4Edit->Text);
 	IniFile->WriteString( sct, "ExcludePtn",	ExlcudeEdit->Text);
+	IniFile->WriteString(sct, "SoundMatched",	SndMatchEdit->Text);
 
 	sct = "Color";
 	IniFile->WriteInteger(sct, "fgEm1",		(int)col_fgEm1);
@@ -339,6 +341,7 @@ void __fastcall TDDbgMonFrm::AddLog(UnicodeString s, int tag)
 	UnicodeString ptn = (tag==1)? MatchComboBox2->Text : MatchComboBox1->Text;
 	if (!ptn_match_str(ptn, s).IsEmpty()) {
 		(is2? MatchListBox2 : MatchListBox1)->Items->AddObject(lbuf, (TObject*)lp->ItemIndex);
+		if (!SndMatchEdit->Text.IsEmpty()) play_sound(SndMatchEdit->Text);
 	}
 }
 //---------------------------------------------------------------------------
@@ -633,6 +636,58 @@ void __fastcall TDDbgMonFrm::ClearLogActionUpdate(TObject *Sender)
 	((TAction *)Sender)->Enabled = !Working && (((tag==1)? LogListBox2->Count : LogListBox1->Count) > 0);
 }
 //---------------------------------------------------------------------------
+//ログの先頭に移動
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::TopOfLogActionExecute(TObject *Sender)
+{
+	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
+	lp->ItemIndex = 0;
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::TopOfLogActionUpdate(TObject *Sender)
+{
+	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
+	((TAction*)Sender)->Enabled = (lp->Count>0);
+}
+//---------------------------------------------------------------------------
+//ログの最後に移動
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::EndOfLogActionExecute(TObject *Sender)
+{
+	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
+	lp->ItemIndex = lp->Count - 1;
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::EndOfLogActionUpdate(TObject *Sender)
+{
+	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
+	((TAction*)Sender)->Enabled = (lp->Count>1 && lp->ItemIndex<lp->Count-1); 
+}
+//---------------------------------------------------------------------------
+//マッチリストを更新
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::ReMatchActionExecute(TObject *Sender)
+{
+	TAction *ap = (TAction*)Sender;
+	bool is2 = (ap->Tag==1);
+	TComboBox *cp = is2? MatchComboBox2 : MatchComboBox1;
+	TStringList *sp = (is2? LogBuffer2 : LogBuffer);
+	TListBox *mp = is2? MatchListBox2 : MatchListBox1;
+	mp->Clear();
+	for (int i=0; i<sp->Count; i++) {
+		UnicodeString lbuf = sp->Strings[i];
+		UnicodeString s = get_tkn_r(lbuf, " ");
+		if (!ptn_match_str(cp->Text, s).IsEmpty()) mp->Items->AddObject(lbuf, (TObject*)i);
+	}
+	if (mp->Count>0) add_ComboBox_history(cp, cp->Text);
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::ReMatchActionUpdate(TObject *Sender)
+{
+	TAction *ap = (TAction*)Sender;
+	ap->Enabled = !((ap->Tag==1)? MatchComboBox2 : MatchComboBox1)->Text.IsEmpty();
+}
+//---------------------------------------------------------------------------
 // 透明度
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::TransBarChange(TObject *Sender)
@@ -693,57 +748,23 @@ void __fastcall TDDbgMonFrm::ColorListBoxDblClick(TObject *Sender)
 }
 
 //---------------------------------------------------------------------------
-//ログの先頭に移動
+//マッチ時のサウンド
 //---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::TopOfLogActionExecute(TObject *Sender)
+void __fastcall TDDbgMonFrm::RefSndWatchBtnClick(TObject *Sender)
 {
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	lp->ItemIndex = 0;
-}
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::TopOfLogActionUpdate(TObject *Sender)
-{
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	((TAction*)Sender)->Enabled = (lp->Count>0);
-}
-//---------------------------------------------------------------------------
-//ログの最後に移動
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::EndOfLogActionExecute(TObject *Sender)
-{
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	lp->ItemIndex = lp->Count - 1;
-}
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::EndOfLogActionUpdate(TObject *Sender)
-{
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	((TAction*)Sender)->Enabled = (lp->Count>1 && lp->ItemIndex<lp->Count-1); 
-}
-
-//---------------------------------------------------------------------------
-//マッチリストを更新
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::ReMatchActionExecute(TObject *Sender)
-{
-	TAction *ap = (TAction*)Sender;
-	bool is2 = (ap->Tag==1);
-	TComboBox *cp = is2? MatchComboBox2 : MatchComboBox1;
-	TStringList *sp = (is2? LogBuffer2 : LogBuffer);
-	TListBox *mp = is2? MatchListBox2 : MatchListBox1;
-	mp->Clear();
-	for (int i=0; i<sp->Count; i++) {
-		UnicodeString lbuf = sp->Strings[i];
-		UnicodeString s = get_tkn_r(lbuf, " ");
-		if (!ptn_match_str(cp->Text, s).IsEmpty()) mp->Items->AddObject(lbuf, (TObject*)i);
+	OpenDialog1->Title		= "Select Sound File";
+	OpenDialog1->FileName	= EmptyStr;
+	OpenDialog1->InitialDir = ExtractFileDir(Application->ExeName);
+	OpenDialog1->Filter 	= "WAV File|*.WAV";
+	OpenDialog1->DefaultExt = "wav";
+	if (OpenDialog1->Execute()) {
+		SndMatchEdit->Text = OpenDialog1->FileName;
+		play_sound(SndMatchEdit->Text);
 	}
-	if (mp->Count>0) add_ComboBox_history(cp, cp->Text);
 }
 //---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::ReMatchActionUpdate(TObject *Sender)
+void __fastcall TDDbgMonFrm::TestSndWatchBtnClick(TObject *Sender)
 {
-	TAction *ap = (TAction*)Sender;
-	ap->Enabled = !((ap->Tag==1)? MatchComboBox2 : MatchComboBox1)->Text.IsEmpty();
+	play_sound(SndMatchEdit->Text);
 }
 //---------------------------------------------------------------------------
-

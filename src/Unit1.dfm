@@ -3,7 +3,7 @@ object DDbgMonFrm: TDDbgMonFrm
   Top = 0
   AlphaBlend = True
   Caption = 'Dual Debug Monitor'
-  ClientHeight = 442
+  ClientHeight = 478
   ClientWidth = 668
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -23,7 +23,7 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 473
     Top = 0
     Width = 5
-    Height = 442
+    Height = 478
     Beveled = True
     ExplicitLeft = 537
     ExplicitHeight = 498
@@ -32,26 +32,24 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 0
     Top = 0
     Width = 273
-    Height = 442
+    Height = 478
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitHeight = 441
     object PageControl1: TPageControl
       Left = 0
       Top = 0
       Width = 273
-      Height = 442
+      Height = 478
       ActivePage = MonitorSheet
       Align = alClient
       TabOrder = 0
       TabWidth = 100
-      ExplicitHeight = 441
       object MonitorSheet: TTabSheet
         Caption = 'Monitor'
         DesignSize = (
           265
-          412)
+          448)
         object Button1: TButton
           Left = 19
           Top = 249
@@ -281,6 +279,18 @@ object DDbgMonFrm: TDDbgMonFrm
           Action = PauseAction
           TabOrder = 3
         end
+        object ExlcudeEdit: TLabeledEdit
+          Left = 19
+          Top = 304
+          Width = 233
+          Height = 23
+          Hint = 'specify multiple by separating with '#39';'#39' (/re/)'
+          EditLabel.Width = 82
+          EditLabel.Height = 15
+          EditLabel.Caption = 'Exclude Pattern'
+          TabOrder = 5
+          Text = ''
+        end
       end
       object OptionSheet: TTabSheet
         Caption = 'Option'
@@ -307,7 +317,7 @@ object DDbgMonFrm: TDDbgMonFrm
           OnChange = TransBarChange
         end
         object ColorGroupBox: TGroupBox
-          Left = 9
+          Left = 8
           Top = 203
           Width = 240
           Height = 116
@@ -330,7 +340,7 @@ object DDbgMonFrm: TDDbgMonFrm
           end
         end
         object PtnGroupBox: TGroupBox
-          Left = 9
+          Left = 8
           Top = 54
           Width = 240
           Height = 137
@@ -393,17 +403,48 @@ object DDbgMonFrm: TDDbgMonFrm
             Text = ''
           end
         end
-        object ExlcudeEdit: TLabeledEdit
-          Left = 19
-          Top = 353
-          Width = 220
-          Height = 23
-          Hint = 'specify multiple by separating with '#39';'#39' (/re/)'
-          EditLabel.Width = 82
-          EditLabel.Height = 15
-          EditLabel.Caption = 'Exclude Pattern'
+        object SndWatchGroupBox: TGroupBox
+          Left = 8
+          Top = 332
+          Width = 240
+          Height = 49
+          Caption = 'Match Sound'
           TabOrder = 4
-          Text = ''
+          DesignSize = (
+            240
+            49)
+          object SndMatchEdit: TEdit
+            Left = 10
+            Top = 18
+            Width = 162
+            Height = 23
+            Anchors = [akLeft, akTop, akRight]
+            TabOrder = 0
+          end
+          object RefSndWatchBtn: TButton
+            Tag = 3
+            Left = 174
+            Top = 17
+            Width = 36
+            Height = 22
+            Hint = #21442#29031
+            Anchors = [akTop, akRight]
+            Caption = '...'
+            TabOrder = 1
+            OnClick = RefSndWatchBtnClick
+          end
+          object TestSndWatchBtn: TButton
+            Tag = 3
+            Left = 211
+            Top = 17
+            Width = 22
+            Height = 22
+            Hint = 'Test'
+            Anchors = [akTop, akRight]
+            Caption = '>'
+            TabOrder = 2
+            OnClick = TestSndWatchBtnClick
+          end
         end
       end
     end
@@ -412,14 +453,13 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 273
     Top = 0
     Width = 200
-    Height = 442
+    Height = 478
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 441
     object Splitter2: TSplitter
       Left = 0
-      Top = 305
+      Top = 341
       Width = 200
       Height = 4
       Cursor = crVSplit
@@ -431,7 +471,7 @@ object DDbgMonFrm: TDDbgMonFrm
       Left = 0
       Top = 29
       Width = 200
-      Height = 276
+      Height = 312
       Style = lbVirtualOwnerDraw
       Align = alClient
       DoubleBuffered = True
@@ -440,7 +480,6 @@ object DDbgMonFrm: TDDbgMonFrm
       OnClick = LogListBoxClick
       OnData = LogListBoxData
       OnDrawItem = LogListBoxDrawItem
-      ExplicitHeight = 275
     end
     object ToolBar1: TToolBar
       Left = 0
@@ -504,13 +543,12 @@ object DDbgMonFrm: TDDbgMonFrm
     end
     object MatchPanel1: TPanel
       Left = 0
-      Top = 309
+      Top = 345
       Width = 200
       Height = 133
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitTop = 308
       object MatchListBox1: TListBox
         Left = 0
         Top = 25
@@ -560,15 +598,13 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 478
     Top = 0
     Width = 190
-    Height = 442
+    Height = 478
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitWidth = 186
-    ExplicitHeight = 441
     object Splitter3: TSplitter
       Left = 0
-      Top = 305
+      Top = 341
       Width = 190
       Height = 4
       Cursor = crVSplit
@@ -581,7 +617,7 @@ object DDbgMonFrm: TDDbgMonFrm
       Left = 0
       Top = 29
       Width = 190
-      Height = 276
+      Height = 312
       Style = lbVirtualOwnerDraw
       Align = alClient
       DoubleBuffered = True
@@ -590,8 +626,6 @@ object DDbgMonFrm: TDDbgMonFrm
       OnClick = LogListBoxClick
       OnData = LogListBox2Data
       OnDrawItem = LogListBoxDrawItem
-      ExplicitWidth = 186
-      ExplicitHeight = 275
     end
     object ToolBar2: TToolBar
       Left = 0
@@ -605,7 +639,6 @@ object DDbgMonFrm: TDDbgMonFrm
       List = True
       AllowTextButtons = True
       TabOrder = 1
-      ExplicitWidth = 186
       object ToolButton8: TToolButton
         Left = 0
         Top = 0
@@ -655,14 +688,12 @@ object DDbgMonFrm: TDDbgMonFrm
     end
     object MatchPanel2: TPanel
       Left = 0
-      Top = 309
+      Top = 345
       Width = 190
       Height = 133
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitTop = 308
-      ExplicitWidth = 186
       object MatchListBox2: TListBox
         Tag = 1
         Left = 0
@@ -676,7 +707,6 @@ object DDbgMonFrm: TDDbgMonFrm
         TabOrder = 0
         OnClick = MatchListBoxClick
         OnDrawItem = LogListBoxDrawItem
-        ExplicitWidth = 186
       end
       object Panel2: TPanel
         Left = 0
@@ -687,7 +717,6 @@ object DDbgMonFrm: TDDbgMonFrm
         AutoSize = True
         BevelOuter = bvLowered
         TabOrder = 1
-        ExplicitWidth = 186
         object SpeedButton2: TSpeedButton
           Left = 166
           Top = 1
@@ -708,7 +737,6 @@ object DDbgMonFrm: TDDbgMonFrm
           Align = alClient
           TabOrder = 0
           OnChange = MatchStrChange
-          ExplicitWidth = 161
         end
       end
     end
@@ -1823,5 +1851,9 @@ object DDbgMonFrm: TDDbgMonFrm
       E0007FF0FFFFFFFFFFFF0000FFFFFFFFFFFFFFFFFFFF0000FFFFFFFFFFFFFFFF
       FFFF0000FFFFFFFFFFFFFFFFFFFF000000000000000000000000000000000000
       000000000000}
+  end
+  object OpenDialog1: TOpenDialog
+    Left = 510
+    Top = 176
   end
 end
