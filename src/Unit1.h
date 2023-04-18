@@ -34,7 +34,6 @@ __published:	// IDE で管理されるコンポーネント
 	TAction *EndOfLog2Action;
 	TAction *Find2Action;
 	TAction *FindAction;
-	TAction *PauseAction;
 	TAction *ReMatch1Action;
 	TAction *ReMatch2Action;
 	TAction *SaveLog2Action;
@@ -49,7 +48,6 @@ __published:	// IDE で管理されるコンポーネント
 	TActionList *ActionList1;
 	TButton *Button1;
 	TButton *Button2;
-	TButton *Button3;
 	TButton *RefSndWatchBtn;
 	TButton *SearchBtn1;
 	TButton *SearchBtn2;
@@ -97,6 +95,7 @@ __published:	// IDE で管理されるコンポーネント
 	TPanel *Panel2;
 	TPanel *TargetPanel1;
 	TPanel *TargetPanel2;
+	TRadioGroup *ModeRadioGroup;
 	TSaveDialog *SaveDialog1;
 	TSpeedButton *SpeedButton1;
 	TSpeedButton *SpeedButton2;
@@ -106,6 +105,7 @@ __published:	// IDE で管理されるコンポーネント
 	TTabSheet *MonitorSheet;
 	TTabSheet *OptionSheet;
 	TTimer *Timer1;
+	TTimer *Timer2;
 	TToolBar *ToolBar1;
 	TToolBar *ToolBar2;
 	TToolButton *ToolButton1;
@@ -132,24 +132,22 @@ __published:	// IDE で管理されるコンポーネント
 	void __fastcall FormClose(TObject *Sender, TCloseAction &Action);
 	void __fastcall FormDestroy(TObject *Sender);
 	void __fastcall Timer1Timer(TObject *Sender);
+	void __fastcall Timer2Timer(TObject *Sender);
 	void __fastcall CapToolImage1MouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
 	void __fastcall CapToolImage1MouseUp(TObject *Sender, TMouseButton Button, TShiftState Shift, int X, int Y);
 	void __fastcall FindActionExecute(TObject *Sender);
 	void __fastcall FindActionUpdate(TObject *Sender);
+	void __fastcall ModeRadioGroupClick(TObject *Sender);
 	void __fastcall LogListBoxData(TWinControl *Control, int Index, UnicodeString &Data);
-	void __fastcall LogListBox2Data(TWinControl *Control, int Index, UnicodeString &Data);
+	void __fastcall LogListBoxDataObject(TWinControl *Control, int Index, TObject *&DataObject);
 	void __fastcall LogListBoxDrawItem(TWinControl *Control, int Index, TRect &Rect, TOwnerDrawState State);
 	void __fastcall LogListBoxClick(TObject *Sender);
 	void __fastcall MatchListBoxClick(TObject *Sender);
 	void __fastcall MatchStrChange(TObject *Sender);
 	void __fastcall StartActionExecute(TObject *Sender);
 	void __fastcall StartActionUpdate(TObject *Sender);
-	void __fastcall PauseActionExecute(TObject *Sender);
-	void __fastcall PauseActionUpdate(TObject *Sender);
 	void __fastcall StopActionExecute(TObject *Sender);
 	void __fastcall StopActionUpdate(TObject *Sender);
-	void __fastcall StopProcActionExecute(TObject *Sender);
-	void __fastcall StopProcActionUpdate(TObject *Sender);
 	void __fastcall CloseActionExecute(TObject *Sender);
 	void __fastcall CloseActionUpdate(TObject *Sender);
 	void __fastcall TerminateActionExecute(TObject *Sender);
@@ -170,6 +168,8 @@ __published:	// IDE で管理されるコンポーネント
 	void __fastcall ColorListBoxDblClick(TObject *Sender);
 	void __fastcall RefSndWatchBtnClick(TObject *Sender);
 	void __fastcall TestSndWatchBtnClick(TObject *Sender);
+	void __fastcall Splitter2Moved(TObject *Sender);
+	void __fastcall Splitter3Moved(TObject *Sender);
 
 private:	// ユーザー宣言
 	TIniFile *IniFile;
@@ -177,7 +177,6 @@ private:	// ユーザー宣言
 	TCursor crTarget;
 
 	bool Working;
-	bool Pausing;
 	bool Capturing;
 	int  CaptureTag;
 
@@ -194,8 +193,11 @@ private:	// ユーザー宣言
 	TColor col_fgEm4;
 	TColor col_fgMark;
 
-	TStringList *LogBuffer;
+	TStringList *LogBuffer1;
 	TStringList *LogBuffer2;
+	TStringList *LogBufferM;
+
+	int LastTopIndex;
 
 	UnicodeString SoundMatched;
 
@@ -204,10 +206,14 @@ private:	// ユーザー宣言
 		ep->Color  = ep->Text.IsEmpty()? clLtGray : clWindow;
 	}
 
+	bool __fastcall IsMerge() {
+		return (ModeRadioGroup->ItemIndex==1);
+	}
+
 	void __fastcall ClearID(int tag);
 	void __fastcall PrepareTarget(HWND hWnd, int tag);
 	bool __fastcall WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2 = 0, HWND hWnd2 = NULL);
-	void __fastcall AddLog(UnicodeString s, int tag);
+	void __fastcall AddLog(UnicodeString s, int tag, TDateTime t);
 
 public:		// ユーザー宣言
 	__fastcall TDDbgMonFrm(TComponent* Owner);

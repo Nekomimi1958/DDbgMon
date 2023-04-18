@@ -20,15 +20,17 @@ __fastcall TDDbgMonFrm::TDDbgMonFrm(TComponent *Owner) : TForm(Owner)
 void __fastcall TDDbgMonFrm::FormCreate(TObject *Sender)
 {
 	Working    = false;
-	Pausing    = false;
 	Capturing  = false;
 	CaptureTag = 0;
 
 	TargetPID1  = TargetPID2  = 0;
 	TargetHWnd1 = TargetHWnd2 = NULL;
 
-	LogBuffer  = new TStringList();
+	LastTopIndex = -1;
+
+	LogBuffer1 = new TStringList();
 	LogBuffer2 = new TStringList();
+	LogBufferM = new TStringList();
 
 	crTarget = (TCursor)6;
 	Screen->Cursors[crTarget] = (HCURSOR)::LoadImage(HInstance, _T("TARGET_TOOL"), IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE);
@@ -40,7 +42,7 @@ void __fastcall TDDbgMonFrm::FormCreate(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 {
-	load_form_pos(this, IniFile, 680, 480);
+	load_form_pos(this, IniFile, 680, 500);
 
 	UnicodeString sct = "General";
 	LogPanel1->Width    = IniFile->ReadInteger(sct, "LogListWidth",		(ClientWidth - OpePanel->Width)/2);
@@ -48,6 +50,7 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 	MatchPanel2->Height = IniFile->ReadInteger(sct, "MatchList2Height",	150);
 
 	sct = "Option";
+	ModeRadioGroup->ItemIndex = IniFile->ReadInteger(sct, "LogMode",	0);
 	TopMostAction->Checked = IniFile->ReadBool(sct, "TopMost", false);
 	set_TopMost(this, TopMostAction->Checked);
 	TransBar->Position = IniFile->ReadInteger(sct, "AlphaBlend",	255);
@@ -111,6 +114,7 @@ void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
 	IniFile->WriteInteger(sct, "MatchList2Height",	MatchPanel2->Height);
 
 	sct = "Option";
+	IniFile->WriteInteger(sct, "LogMode",		ModeRadioGroup->ItemIndex);
 	IniFile->WriteBool(   sct, "TopMost",		TopMostAction->Checked);
 	IniFile->WriteInteger(sct, "AlphaBlend",	TransBar->Position);
 	IniFile->WriteString( sct, "LastClass",		ClassEdit1->Text);
@@ -135,8 +139,9 @@ void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::FormDestroy(TObject *Sender)
 {
-	delete LogBuffer;
+	delete LogBuffer1;
 	delete LogBuffer2;
+	delete LogBufferM;
 	delete IniFile;
 }
 
@@ -170,6 +175,23 @@ void __fastcall TDDbgMonFrm::Timer1Timer(TObject *Sender)
 			if (hProc) ::CloseHandle(hProc); else ClearID(1);
 		}
 	}
+
+}
+//---------------------------------------------------------------------------
+//タイマー処理	(Interval = 100ms)
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::Timer2Timer(TObject *Sender)
+{
+	//ログリストの同期
+	if (IsMerge()) {
+		if (LogListBox1->TopIndex!=LogListBox2->TopIndex) {
+			if (LogListBox1->TopIndex!=LastTopIndex)
+				LogListBox2->TopIndex = LogListBox1->TopIndex; 
+			else
+				LogListBox1->TopIndex = LogListBox2->TopIndex;
+			LastTopIndex = LogListBox1->TopIndex;
+		}
+	}
 }
 //---------------------------------------------------------------------------
 //プロセス指定情報をクリア
@@ -196,6 +218,8 @@ void __fastcall TDDbgMonFrm::ClearID(int tag)
 		SetEditColor(HWndEdit1);
 		GroupBox1->Caption = get_tkn(GroupBox1->Caption, " -");
 	}
+
+	if (TargetPID1==0 && TargetPID2==0) Working = false;
 }
 //---------------------------------------------------------------------------
 //ハンドルから対象プロセスを準備
@@ -235,16 +259,15 @@ bool __fastcall TDDbgMonFrm::WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2
 	if (pid==0 && pid2==0) return false;
 
 	try {
-		Working = true;
-		Pausing = false;
-
 		TargetPID1  = pid;
 		TargetPID2  = pid2;
 		TargetHWnd1 = hWnd;
 		TargetHWnd2 = hWnd2;
+		Working     = true;
 
-		if (TargetPID1!=0) AddLog(">>> Monitor1 - " + ExtractFileName(TargetFname1), 0);
-		if (TargetPID2!=0) AddLog(">>> Monitor2 - " + ExtractFileName(TargetFname2), 1);
+		TDateTime t = Now();
+		if (TargetPID1!=0) AddLog(">>> Monitor1 - " + ExtractFileName(TargetFname1), 0, t);
+		if (TargetPID2!=0) AddLog(">>> Monitor2 - " + ExtractFileName(TargetFname2), 1, t);
 		UpdateActions();
 
 		SECURITY_ATTRIBUTES sa;
@@ -267,25 +290,26 @@ bool __fastcall TDDbgMonFrm::WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2
 
 		LPDWORD pPID = (LPDWORD)pMem;
 		LPSTR pSTR = (LPSTR)(pPID + 1);
+		UnicodeString msg;
 
 		SetEvent(hEvAck);
-		while (TargetPID1>0 || TargetPID2>0) {
+		while (Working && (TargetPID1>0 || TargetPID2>0)) {
 			Application->ProcessMessages();
 			UpdateActions();
 
 			switch (WaitForSingleObject(hEvReady, 100)) {
 			case WAIT_OBJECT_0:
-				if (!Pausing) {
-					UnicodeString msg = pSTR;
-					msg = get_tkn(msg, "\r");
-					if (!ptn_match_str(ExlcudeEdit->Text, msg).IsEmpty()) msg = EmptyStr;
-					if (!msg.IsEmpty()) {
-						if (TargetPID1 == *pPID) AddLog(msg, 0);
-						if (TargetPID2 == *pPID) AddLog(msg, 1);
-					}
+				msg = pSTR;
+				msg = get_tkn(msg, "\r");
+				if (!ptn_match_str(ExlcudeEdit->Text, msg).IsEmpty()) msg = EmptyStr;
+				if (!msg.IsEmpty()) {
+					TDateTime t = Now();
+					if (TargetPID1 == *pPID) AddLog(msg, 0, t);
+					if (TargetPID2 == *pPID) AddLog(msg, 1, t);
 				}
 				if (TargetPID1>0 || TargetPID2>0) SetEvent(hEvAck);
 				break;
+
 			case WAIT_FAILED:
 				msgbox_ERR(SysErrorMessage(GetLastError()));
 				break;
@@ -301,7 +325,6 @@ bool __fastcall TDDbgMonFrm::WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2
 		if (!MatchComboBox2->Text.IsEmpty()) add_ComboBox_history(MatchComboBox2, MatchComboBox2->Text);
 
 		Working = false;
-		Pausing = false;
 		return true;
 	}
 	catch (...) {
@@ -313,27 +336,51 @@ bool __fastcall TDDbgMonFrm::WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2
 //---------------------------------------------------------------------------
 //ログの追加
 //---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::AddLog(UnicodeString s, int tag)
+void __fastcall TDDbgMonFrm::AddLog(UnicodeString s, int tag, TDateTime t)
 {
 	bool is2 = (tag==1);
 
-	UnicodeString lbuf = FormatDateTime("hh:nn:ss.zzz ", Now()) + s;
-	TStringList *sp = (is2? LogBuffer2 : LogBuffer);
-	sp->Add(lbuf);
+	UnicodeString lbuf = FormatDateTime("hh:nn:ss.zzz ", t) + s;
+	TStringList *sp = (is2? LogBuffer2 : LogBuffer1);
+	sp->AddObject(lbuf, (TObject*)tag);
+	LogBufferM->AddObject(lbuf, (TObject*)tag);
 
 	TListBox *lp  = is2? LogListBox2 : LogListBox1;
 	int  last_idx = lp->ItemIndex;
 	int  last_top = lp->TopIndex;
 	bool is_btm   = (last_idx == lp->Count - 1);
 
-	lp->Count     = sp->Count;
-	if (is_btm) {
-		lp->ItemIndex = lp->Count - 1;
+	LogListBox1->LockDrawing();
+	LogListBox2->LockDrawing();
+	if (IsMerge()) {
+		Timer2->Enabled = false;
+		LogListBox1->Count = LogBufferM->Count;
+		LogListBox2->Count = LogBufferM->Count;
+		if (is_btm) {
+			LogListBox1->ItemIndex = LogListBox1->Count - 1;
+			LogListBox2->ItemIndex = LogListBox2->Count - 1;
+		}
+		else {
+			LogListBox1->ItemIndex = last_idx;
+			LogListBox1->TopIndex  = last_top;
+			LogListBox2->ItemIndex = last_idx;
+			LogListBox2->TopIndex  = last_top;
+			LastTopIndex = last_top;
+		}
+		Timer2->Enabled = true;
 	}
 	else {
-		lp->TopIndex  = last_top;
-		lp->ItemIndex = last_idx;
+		lp->Count = sp->Count;
+		if (is_btm) {
+			lp->ItemIndex = lp->Count - 1;
+		}
+		else {
+			lp->ItemIndex = last_idx;
+			lp->TopIndex  = last_top;
+		}
 	}
+	LogListBox1->UnlockDrawing();
+	LogListBox2->UnlockDrawing();
 
 	(is2? TopOfLog2Action : TopOfLog1Action)->Update();
 	(is2? EndOfLog2Action : EndOfLog1Action)->Update();
@@ -397,14 +444,34 @@ void __fastcall TDDbgMonFrm::FindActionUpdate(TObject *Sender)
 	ap->Enabled = !Working;
 }
 //---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::LogListBoxData(TWinControl *Control, int Index, UnicodeString &Data)
+void __fastcall TDDbgMonFrm::ModeRadioGroupClick(TObject *Sender)
 {
-	Data = LogBuffer->Strings[Index];
+	LogListBox1->LockDrawing();
+	LogListBox2->LockDrawing();
+	if (IsMerge()) {
+		Timer2->Enabled    = false;
+		LogListBox1->Count = LogBufferM->Count;
+		LogListBox2->Count = LogBufferM->Count;
+		Timer2->Enabled    = true;
+	}
+	else {
+		LogListBox1->Count = LogBuffer1->Count;
+		LogListBox2->Count = LogBuffer2->Count;
+	}
+	LogListBox1->UnlockDrawing();
+	LogListBox2->UnlockDrawing();
 }
 //---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::LogListBox2Data(TWinControl *Control, int Index, UnicodeString &Data)
+void __fastcall TDDbgMonFrm::LogListBoxData(TWinControl *Control, int Index, UnicodeString &Data)
 {
-	Data = LogBuffer2->Strings[Index];
+	TStringList *sp = (IsMerge()? LogBufferM : ((Control->Tag==1)? LogBuffer2 : LogBuffer1));
+	Data = sp->Strings[Index];
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::LogListBoxDataObject(TWinControl *Control, int Index, TObject *&DataObject)
+{
+	TStringList *sp = (IsMerge()? LogBufferM : ((Control->Tag==1)? LogBuffer2 : LogBuffer1));
+	DataObject = sp->Objects[Index];
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
@@ -417,14 +484,18 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 	cv->FillRect(Rect);
 
 	UnicodeString lbuf = lp->Items->Strings[Index];
+	int o_tag = (int)lp->Items->Objects[Index];
 	UnicodeString t = get_tkn(lbuf, " ") + " ";
-	UnicodeString s = get_tkn_r(lbuf, " ");
-	cv->Font->Color = State.Contains(odSelected)? clHighlightText : clDkGray;
+	UnicodeString s;
+	if (lp==MatchListBox2 || lp==MatchListBox1 || !IsMerge || o_tag==lp->Tag) s = get_tkn_r(lbuf, " ");
+
+	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
+					(IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
 	int xp = Rect.Left + 2;
 	cv->TextOut(xp, Rect.Top, t);
 	xp += cv->TextWidth(t);
 	UnicodeString ptn = ((lp->Tag==1)? MatchComboBox2 : MatchComboBox1)->Text;
-	cv->Font->Color =   State.Contains(odSelected)? clHighlightText :
+	cv->Font->Color   = State.Contains(odSelected)? clHighlightText :
 				  !ptn_match_str(ptn, s).IsEmpty()? col_fgMark :
 		!ptn_match_str(Em1Edit->Text, s).IsEmpty()? col_fgEm1 :
 		!ptn_match_str(Em2Edit->Text, s).IsEmpty()? col_fgEm2 :
@@ -438,22 +509,28 @@ void __fastcall TDDbgMonFrm::LogListBoxClick(TObject *Sender)
 	int tag = ((TComponent*)Sender)->Tag;
 	TListBox *lp  = (tag==1)? LogListBox2 : LogListBox1;
 	TListBox *lp2 = (tag==1)? LogListBox1 : LogListBox2;
-	int idx = (tag==1)? lp->ItemIndex : lp->ItemIndex;
+	int idx = lp->ItemIndex;
 	if (idx!=-1) {
-		int d_idx = idx - lp->TopIndex;
-		try {
-			TDateTime t = TDateTime(get_tkn(lp->Items->Strings[idx], " "));
-			for (int i=0; i<lp2->Count; i++) {
-				TDateTime t2 = TDateTime(get_tkn(lp2->Items->Strings[i], " "));
-				if (t2>t) {
-					lp2->ItemIndex = i;
-					lp2->TopIndex  = i - d_idx;
-					break;
+		if (IsMerge()) {
+			lp2->ItemIndex = idx;
+			lp2->TopIndex  = lp->TopIndex;
+		}
+		else {
+			int d_idx = idx - lp->TopIndex;
+			try {
+				TDateTime t = TDateTime(get_tkn(lp->Items->Strings[idx], " "));
+				for (int i=0; i<lp2->Count; i++) {
+					TDateTime t2 = TDateTime(get_tkn(lp2->Items->Strings[i], " "));
+					if (t2>=t) {
+						lp2->ItemIndex = i;
+						lp2->TopIndex  = i - d_idx;
+						break;
+					}
 				}
 			}
-		}
-		catch (EConvertError &e) {
-			::MessageBeep(MB_ICONEXCLAMATION);
+			catch (EConvertError &e) {
+				::MessageBeep(MB_ICONEXCLAMATION);
+			}
 		}
 	}
 }
@@ -502,33 +579,19 @@ void __fastcall TDDbgMonFrm::StartActionUpdate(TObject *Sender)
 	GroupBox1->Enabled = !Working;
 	GroupBox2->Enabled = !Working;
 
+	ModeRadioGroup->Enabled = !Working;
+
 	SetEditColor(PidEdit1);
 	SetEditColor(PidEdit2);
 	SetEditColor(HWndEdit1);
 	SetEditColor(HWndEdit2);
 }
 //---------------------------------------------------------------------------
-//休止/再開
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::PauseActionExecute(TObject *Sender)
-{
-	Pausing = !Pausing;
-	UpdateActions();
-}
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::PauseActionUpdate(TObject *Sender)
-{
-	TAction *ap = (TAction*)Sender;
-	ap->Caption = Pausing? "Resume" : "Pause";
-	ap->Enabled = Working;
-}
-//---------------------------------------------------------------------------
 //停止
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::StopActionExecute(TObject *Sender)
 {
-	ClearID(0);
-	ClearID(1);
+	Working = false;
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::StopActionUpdate(TObject *Sender)
@@ -536,18 +599,6 @@ void __fastcall TDDbgMonFrm::StopActionUpdate(TObject *Sender)
 	TAction *ap = (TAction *)Sender;
 	ap->Enabled = Working;
 }
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::StopProcActionExecute(TObject *Sender)
-{
-	ClearID(((TComponent*)Sender)->Tag);
-}
-//---------------------------------------------------------------------------
-void __fastcall TDDbgMonFrm::StopProcActionUpdate(TObject *Sender)
-{
-	TAction *ap = (TAction*)Sender;
-	ap->Enabled = Working & (((ap->Tag==1)? TargetPID2 : TargetPID1) > 0);
-}
-
 //---------------------------------------------------------------------------
 //アプリケーションを閉じる
 //---------------------------------------------------------------------------
@@ -605,28 +656,44 @@ void __fastcall TDDbgMonFrm::SaveLogActionExecute(TObject *Sender)
 	SaveDialog1->InitialDir = ExtractFileDir(Application->ExeName);
 	SaveDialog1->Options.Clear();
 	SaveDialog1->Options << ofOverwritePrompt;
-	if (SaveDialog1->Execute()) LogBuffer->SaveToFile(SaveDialog1->FileName);
+	if (SaveDialog1->Execute()) LogBuffer1->SaveToFile(SaveDialog1->FileName);
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::SaveLogActionUpdate(TObject *Sender)
 {
 	int tag = ((TComponent*)Sender)->Tag;
-	((TAction *)Sender)->Enabled = (((tag==1)? LogListBox2->Count : LogListBox1->Count) > 0);
+	((TAction *)Sender)->Enabled = !Working && (((tag==1)? LogListBox2->Count : LogListBox1->Count) > 0);
 }
 //---------------------------------------------------------------------------
 // ログをクリア
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::ClearLogActionExecute(TObject *Sender)
 {
-	if (((TComponent*)Sender)->Tag==1) {
+	int tag = ((TComponent*)Sender)->Tag;
+	if (tag==1) {
 		LogListBox2->Count = 0;
 		LogBuffer2->Clear();
 		MatchListBox2->Clear();
 	}
 	else {
 		LogListBox1->Count = 0;
-		LogBuffer->Clear();
+		LogBuffer1->Clear();
 		MatchListBox1->Clear();
+	}
+
+	std::unique_ptr<TStringList> buf(new TStringList());
+	for (int i=0; i<LogBufferM->Count; i++) {
+		if ((int)LogBufferM->Objects[i]!=tag) buf->AddObject(LogBufferM->Strings[i], LogBufferM->Objects[i]);
+	}
+
+	if (IsMerge()) {
+		LogListBox1->LockDrawing();
+		LogListBox2->LockDrawing();
+		LogBufferM->Assign(buf.get());
+		LogListBox1->Count = LogBufferM->Count;
+		LogListBox2->Count = LogBufferM->Count;
+		LogListBox1->UnlockDrawing();
+		LogListBox2->UnlockDrawing();
 	}
 }
 //---------------------------------------------------------------------------
@@ -640,8 +707,13 @@ void __fastcall TDDbgMonFrm::ClearLogActionUpdate(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::TopOfLogActionExecute(TObject *Sender)
 {
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	lp->ItemIndex = 0;
+	if (IsMerge()) {
+		LogListBox1->ItemIndex = 0;
+		LogListBox2->ItemIndex = 0;
+	}
+	else {
+		((((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1)->ItemIndex = 0;
+	}
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::TopOfLogActionUpdate(TObject *Sender)
@@ -654,8 +726,14 @@ void __fastcall TDDbgMonFrm::TopOfLogActionUpdate(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::EndOfLogActionExecute(TObject *Sender)
 {
-	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	lp->ItemIndex = lp->Count - 1;
+	if (IsMerge()) {
+		LogListBox1->ItemIndex = LogListBox1->Count -1;
+		LogListBox2->ItemIndex = LogListBox2->Count -1;
+	}
+	else {
+		TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
+		lp->ItemIndex = lp->Count - 1;
+	}
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::EndOfLogActionUpdate(TObject *Sender)
@@ -671,7 +749,7 @@ void __fastcall TDDbgMonFrm::ReMatchActionExecute(TObject *Sender)
 	TAction *ap = (TAction*)Sender;
 	bool is2 = (ap->Tag==1);
 	TComboBox *cp = is2? MatchComboBox2 : MatchComboBox1;
-	TStringList *sp = (is2? LogBuffer2 : LogBuffer);
+	TStringList *sp = (is2? LogBuffer2 : LogBuffer1);
 	TListBox *mp = is2? MatchListBox2 : MatchListBox1;
 	mp->Clear();
 	for (int i=0; i<sp->Count; i++) {
@@ -766,5 +844,15 @@ void __fastcall TDDbgMonFrm::RefSndWatchBtnClick(TObject *Sender)
 void __fastcall TDDbgMonFrm::TestSndWatchBtnClick(TObject *Sender)
 {
 	play_sound(SndMatchEdit->Text);
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::Splitter2Moved(TObject *Sender)
+{
+	MatchPanel2->Height = MatchPanel1->Height;
+}
+//---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::Splitter3Moved(TObject *Sender)
+{
+	MatchPanel1->Height = MatchPanel2->Height;
 }
 //---------------------------------------------------------------------------
