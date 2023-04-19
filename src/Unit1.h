@@ -201,7 +201,7 @@ private:	// ƒ†[ƒU[éŒ¾
 
 	int LastTopIndex;
 
-	UnicodeString SoundMatched;
+	TMemoryStream *SoundMem;
 
 	void __fastcall SetEditColor(TLabeledEdit *ep)
 	{

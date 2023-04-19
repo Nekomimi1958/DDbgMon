@@ -5,6 +5,7 @@
 #include "usr_env.h"
 #include "usr_str.h"
 #include "usr_ctrl.h"
+#include "usr_file_ex.h"
 #include "usr_misc.h"
 #include "Unit1.h"
 //---------------------------------------------------------------------------
@@ -31,6 +32,7 @@ void __fastcall TDDbgMonFrm::FormCreate(TObject *Sender)
 	LogBuffer1 = new TStringList();
 	LogBuffer2 = new TStringList();
 	LogBufferM = new TStringList();
+	SoundMem   = new TMemoryStream();
 
 	crTarget = (TCursor)6;
 	Screen->Cursors[crTarget] = (HCURSOR)::LoadImage(HInstance, _T("TARGET_TOOL"), IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE);
@@ -62,7 +64,10 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 	Em3Edit->Text      = IniFile->ReadString( sct, "EmMatchStr3",	EmptyStr);
 	Em4Edit->Text      = IniFile->ReadString( sct, "EmMatchStr4",	EmptyStr);
 	ExlcudeEdit->Text  = IniFile->ReadString( sct, "ExcludePtn",	"recv msg;attach;detach");
+
 	SndMatchEdit->Text = IniFile->ReadString( sct, "SoundMatched",	EmptyStr);
+	SndMatchEdit->Hint = SndMatchEdit->Text;
+	if (file_exists(SndMatchEdit->Text)) SoundMem->LoadFromFile(SndMatchEdit->Text);
 
 	sct = "Color";
 	col_fgEm1  = (TColor)IniFile->ReadInteger(sct, "fgEm1",	0x33cc33);
@@ -144,6 +149,7 @@ void __fastcall TDDbgMonFrm::FormDestroy(TObject *Sender)
 	delete LogBuffer1;
 	delete LogBuffer2;
 	delete LogBufferM;
+	delete SoundMem;
 	delete IniFile;
 }
 
@@ -390,7 +396,7 @@ void __fastcall TDDbgMonFrm::AddLog(UnicodeString s, int tag, TDateTime t)
 	UnicodeString ptn = (tag==1)? MatchComboBox2->Text : MatchComboBox1->Text;
 	if (!ptn_match_str(ptn, s).IsEmpty()) {
 		(is2? MatchListBox2 : MatchListBox1)->Items->AddObject(lbuf, (TObject*)lp->ItemIndex);
-		if (!SndMatchEdit->Text.IsEmpty()) play_sound(SndMatchEdit->Text);
+		if (SoundMem->Size>0) ::sndPlaySound((LPCTSTR)SoundMem->Memory, SND_ASYNC|SND_MEMORY);
 	}
 }
 //---------------------------------------------------------------------------
@@ -496,22 +502,28 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 	int o_tag = (int)lp->Items->Objects[Index];
 	int xp = Rect.Left + 2;
 
-	//ƒ^ƒCƒ€
+	//Time
 	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
 				   (IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
 	UnicodeString ts = get_tkn(lbuf, " ");
-	if (TimeRadioGroup->ItemIndex==1) {
+	if (TimeRadioGroup->ItemIndex==1 || TimeRadioGroup->ItemIndex==2) {
+		if (TimeRadioGroup->ItemIndex==2) {
+			cv->TextOut(xp, Rect.Top, ts);
+			xp += cv->TextWidth(ts + " ");
+		}
+		//Delta
+		UnicodeString ds;
 		try {
 			UnicodeString ts0 = (Index>0)? get_tkn(lp->Items->Strings[Index - 1], " ") : ts;
-			ts.sprintf(_T("%7.3f"), MilliSecondsBetween(TTime(ts), TTime(ts0))/1000.0);
-			if (ts.Length()>7) ts = ts.SubString(1, 7);
+			ds.sprintf(_T("%7.3f"), MilliSecondsBetween(TTime(ts), TTime(ts0))/1000.0);
+			if (ds.Length()>7) ds = ts.SubString(1, 7);
 		}
 		catch (...) {
-			ts = "       ";
+			ds = "       ";
 		}
-		int tw = cv->TextWidth("999.999 ");
-		cv->TextOut(xp + tw - cv->TextWidth(ts + " "), Rect.Top, ts);
-		xp += tw;
+		int dw = cv->TextWidth("999.999 ");
+		cv->TextOut(xp + dw - cv->TextWidth(ds + " "), Rect.Top, ds);
+		xp += dw;
 	}
 	else {
 		cv->TextOut(xp, Rect.Top, ts);
@@ -881,7 +893,9 @@ void __fastcall TDDbgMonFrm::RefSndWatchBtnClick(TObject *Sender)
 	OpenDialog1->DefaultExt = "wav";
 	if (OpenDialog1->Execute()) {
 		SndMatchEdit->Text = OpenDialog1->FileName;
-		play_sound(SndMatchEdit->Text);
+		SndMatchEdit->Hint = SndMatchEdit->Text;
+		SoundMem->LoadFromFile(SndMatchEdit->Text);
+		if (SoundMem->Size>0) ::sndPlaySound((LPCTSTR)SoundMem->Memory, SND_ASYNC|SND_MEMORY);
 	}
 }
 //---------------------------------------------------------------------------
@@ -900,4 +914,3 @@ void __fastcall TDDbgMonFrm::Splitter3Moved(TObject *Sender)
 	MatchPanel1->Height = MatchPanel2->Height;
 }
 //---------------------------------------------------------------------------
-
