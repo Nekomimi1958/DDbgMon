@@ -125,6 +125,7 @@ __published:	// IDE で管理されるコンポーネント
 	TToolButton *ToolButton15;
 	TToolButton *ToolButton16;
 	TTrackBar *TransBar;
+	TRadioGroup *TimeRadioGroup;
 
 	void __fastcall FormCreate(TObject *Sender);
 	void __fastcall FormShow(TObject *Sender);
@@ -170,6 +171,7 @@ __published:	// IDE で管理されるコンポーネント
 	void __fastcall TestSndWatchBtnClick(TObject *Sender);
 	void __fastcall Splitter2Moved(TObject *Sender);
 	void __fastcall Splitter3Moved(TObject *Sender);
+	void __fastcall TimeRadioGroupClick(TObject *Sender);
 
 private:	// ユーザー宣言
 	TIniFile *IniFile;

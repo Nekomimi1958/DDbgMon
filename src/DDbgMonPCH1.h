@@ -8,6 +8,7 @@
 #include <winioctl.h>
 #include <System.StrUtils.hpp>
 #include <System.Win.Registry.hpp>
+#include <System.DateUtils.hpp>
 #include <RegularExpressions.hpp>
 
 

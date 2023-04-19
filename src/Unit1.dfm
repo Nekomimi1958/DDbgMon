@@ -3,8 +3,8 @@ object DDbgMonFrm: TDDbgMonFrm
   Top = 0
   AlphaBlend = True
   Caption = 'Dual Debug Monitor'
-  ClientHeight = 465
-  ClientWidth = 668
+  ClientHeight = 464
+  ClientWidth = 664
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -23,7 +23,7 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 473
     Top = 0
     Width = 5
-    Height = 465
+    Height = 464
     Beveled = True
     ExplicitLeft = 537
     ExplicitHeight = 498
@@ -32,7 +32,7 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 0
     Top = 0
     Width = 273
-    Height = 465
+    Height = 464
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
@@ -40,7 +40,7 @@ object DDbgMonFrm: TDDbgMonFrm
       Left = 0
       Top = 0
       Width = 273
-      Height = 465
+      Height = 464
       ActivePage = MonitorSheet
       Align = alClient
       TabOrder = 0
@@ -49,22 +49,22 @@ object DDbgMonFrm: TDDbgMonFrm
         Caption = 'Monitor'
         DesignSize = (
           265
-          435)
+          434)
         object Button1: TButton
           Left = 31
-          Top = 297
+          Top = 349
           Width = 90
           Height = 24
           Action = StartAction
-          TabOrder = 3
+          TabOrder = 4
         end
         object Button2: TButton
           Left = 145
-          Top = 297
+          Top = 349
           Width = 90
           Height = 24
           Action = StopAction
-          TabOrder = 4
+          TabOrder = 5
         end
         object GroupBox1: TGroupBox
           Left = 3
@@ -284,6 +284,19 @@ object DDbgMonFrm: TDDbgMonFrm
           TabOrder = 2
           OnClick = ModeRadioGroupClick
         end
+        object TimeRadioGroup: TRadioGroup
+          Left = 3
+          Top = 289
+          Width = 259
+          Height = 44
+          Caption = 'Time Display Mode'
+          Columns = 2
+          Items.Strings = (
+            'Time'
+            'Delta')
+          TabOrder = 3
+          OnClick = TimeRadioGroupClick
+        end
       end
       object OptionSheet: TTabSheet
         Caption = 'Option'
@@ -458,13 +471,13 @@ object DDbgMonFrm: TDDbgMonFrm
     Left = 273
     Top = 0
     Width = 200
-    Height = 465
+    Height = 464
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
     object Splitter2: TSplitter
       Left = 0
-      Top = 328
+      Top = 327
       Width = 200
       Height = 4
       Cursor = crVSplit
@@ -477,7 +490,7 @@ object DDbgMonFrm: TDDbgMonFrm
       Left = 0
       Top = 29
       Width = 200
-      Height = 299
+      Height = 298
       Style = lbVirtualOwnerDraw
       Align = alClient
       DoubleBuffered = False
@@ -550,7 +563,7 @@ object DDbgMonFrm: TDDbgMonFrm
     end
     object MatchPanel1: TPanel
       Left = 0
-      Top = 332
+      Top = 331
       Width = 200
       Height = 133
       Align = alBottom
@@ -604,15 +617,15 @@ object DDbgMonFrm: TDDbgMonFrm
   object LogPanel2: TPanel
     Left = 478
     Top = 0
-    Width = 190
-    Height = 465
+    Width = 186
+    Height = 464
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
     object Splitter3: TSplitter
       Left = 0
-      Top = 328
-      Width = 190
+      Top = 327
+      Width = 186
       Height = 4
       Cursor = crVSplit
       Align = alBottom
@@ -624,8 +637,8 @@ object DDbgMonFrm: TDDbgMonFrm
       Tag = 1
       Left = 0
       Top = 29
-      Width = 190
-      Height = 299
+      Width = 186
+      Height = 298
       Style = lbVirtualOwnerDraw
       Align = alClient
       DoubleBuffered = False
@@ -639,7 +652,7 @@ object DDbgMonFrm: TDDbgMonFrm
     object ToolBar2: TToolBar
       Left = 0
       Top = 0
-      Width = 190
+      Width = 186
       Height = 29
       ButtonHeight = 26
       ButtonWidth = 28
@@ -697,8 +710,8 @@ object DDbgMonFrm: TDDbgMonFrm
     end
     object MatchPanel2: TPanel
       Left = 0
-      Top = 332
-      Width = 190
+      Top = 331
+      Width = 186
       Height = 133
       Align = alBottom
       BevelOuter = bvNone
@@ -707,7 +720,7 @@ object DDbgMonFrm: TDDbgMonFrm
         Tag = 1
         Left = 0
         Top = 26
-        Width = 190
+        Width = 186
         Height = 107
         Style = lbOwnerDrawFixed
         Align = alClient
@@ -720,19 +733,20 @@ object DDbgMonFrm: TDDbgMonFrm
       object Panel2: TPanel
         Left = 0
         Top = 0
-        Width = 190
+        Width = 186
         Height = 26
         Align = alTop
         AutoSize = True
         BevelOuter = bvLowered
         TabOrder = 1
         object SpeedButton2: TSpeedButton
-          Left = 166
+          Left = 162
           Top = 1
           Width = 23
           Height = 24
           Action = ReMatch2Action
           Align = alRight
+          ExplicitLeft = 166
           ExplicitTop = 2
           ExplicitHeight = 23
         end
@@ -740,7 +754,7 @@ object DDbgMonFrm: TDDbgMonFrm
           Tag = 1
           Left = 1
           Top = 1
-          Width = 165
+          Width = 161
           Height = 23
           Hint = ';'#12391#21306#20999#12387#12390#35079#25968#25351#23450#21487#12289'/'#65374'/ '#12399#27491#35215#34920#29694
           Align = alClient

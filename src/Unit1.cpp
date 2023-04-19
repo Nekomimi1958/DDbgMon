@@ -51,6 +51,7 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 
 	sct = "Option";
 	ModeRadioGroup->ItemIndex = IniFile->ReadInteger(sct, "LogMode",	0);
+	TimeRadioGroup->ItemIndex = IniFile->ReadInteger(sct, "TimeMode",	0);
 	TopMostAction->Checked = IniFile->ReadBool(sct, "TopMost", false);
 	set_TopMost(this, TopMostAction->Checked);
 	TransBar->Position = IniFile->ReadInteger(sct, "AlphaBlend",	255);
@@ -115,6 +116,7 @@ void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
 
 	sct = "Option";
 	IniFile->WriteInteger(sct, "LogMode",		ModeRadioGroup->ItemIndex);
+	IniFile->WriteInteger(sct, "TimeMode",		TimeRadioGroup->ItemIndex);
 	IniFile->WriteBool(   sct, "TopMost",		TopMostAction->Checked);
 	IniFile->WriteInteger(sct, "AlphaBlend",	TransBar->Position);
 	IniFile->WriteString( sct, "LastClass",		ClassEdit1->Text);
@@ -186,7 +188,7 @@ void __fastcall TDDbgMonFrm::Timer2Timer(TObject *Sender)
 	if (IsMerge()) {
 		if (LogListBox1->TopIndex!=LogListBox2->TopIndex) {
 			if (LogListBox1->TopIndex!=LastTopIndex)
-				LogListBox2->TopIndex = LogListBox1->TopIndex; 
+				LogListBox2->TopIndex = LogListBox1->TopIndex;
 			else
 				LogListBox1->TopIndex = LogListBox2->TopIndex;
 			LastTopIndex = LogListBox1->TopIndex;
@@ -462,6 +464,13 @@ void __fastcall TDDbgMonFrm::ModeRadioGroupClick(TObject *Sender)
 	LogListBox2->UnlockDrawing();
 }
 //---------------------------------------------------------------------------
+void __fastcall TDDbgMonFrm::TimeRadioGroupClick(TObject *Sender)
+{
+	LogListBox1->Repaint();
+	LogListBox2->Repaint();
+}
+
+//---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::LogListBoxData(TWinControl *Control, int Index, UnicodeString &Data)
 {
 	TStringList *sp = (IsMerge()? LogBufferM : ((Control->Tag==1)? LogBuffer2 : LogBuffer1));
@@ -485,15 +494,33 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 
 	UnicodeString lbuf = lp->Items->Strings[Index];
 	int o_tag = (int)lp->Items->Objects[Index];
-	UnicodeString t = get_tkn(lbuf, " ") + " ";
+	int xp = Rect.Left + 2;
+
+	//タイム
+	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
+				   (IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
+	UnicodeString ts = get_tkn(lbuf, " ");
+	if (TimeRadioGroup->ItemIndex==1) {
+		try {
+			UnicodeString ts0 = (Index>0)? get_tkn(lp->Items->Strings[Index - 1], " ") : ts;
+			ts.sprintf(_T("%7.3f"), MilliSecondsBetween(TTime(ts), TTime(ts0))/1000.0);
+			if (ts.Length()>7) ts = ts.SubString(1, 7);
+		}
+		catch (...) {
+			ts = "       ";
+		}
+		int tw = cv->TextWidth("999.999 ");
+		cv->TextOut(xp + tw - cv->TextWidth(ts + " "), Rect.Top, ts);
+		xp += tw;
+	}
+	else {
+		cv->TextOut(xp, Rect.Top, ts);
+		xp += cv->TextWidth(ts + " ");
+	}
+
+	//メッセージ
 	UnicodeString s;
 	if (lp==MatchListBox2 || lp==MatchListBox1 || !IsMerge || o_tag==lp->Tag) s = get_tkn_r(lbuf, " ");
-
-	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
-					(IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
-	int xp = Rect.Left + 2;
-	cv->TextOut(xp, Rect.Top, t);
-	xp += cv->TextWidth(t);
 	UnicodeString ptn = ((lp->Tag==1)? MatchComboBox2 : MatchComboBox1)->Text;
 	cv->Font->Color   = State.Contains(odSelected)? clHighlightText :
 				  !ptn_match_str(ptn, s).IsEmpty()? col_fgMark :
@@ -656,7 +683,24 @@ void __fastcall TDDbgMonFrm::SaveLogActionExecute(TObject *Sender)
 	SaveDialog1->InitialDir = ExtractFileDir(Application->ExeName);
 	SaveDialog1->Options.Clear();
 	SaveDialog1->Options << ofOverwritePrompt;
-	if (SaveDialog1->Execute()) LogBuffer1->SaveToFile(SaveDialog1->FileName);
+	if (SaveDialog1->Execute()) {
+		TStringList *sp = (tag==1)? LogBuffer2 : LogBuffer1;
+		for (int i=0; i<sp->Count; i++) {
+			UnicodeString lbuf  = sp->Strings[i];
+			UnicodeString ts    = TTime(get_tkn(lbuf,  " "));
+			UnicodeString lbuf0 = (i>0)? sp->Strings[i - 1] : lbuf;
+			UnicodeString ds;
+			try {
+				ds.sprintf(_T("%7.3f"), MilliSecondsBetween(ts, TTime(get_tkn(lbuf0, " ")))/1000.0);
+				if (ds.Length()>7) ds = ds.SubString(1, 7);
+			}
+			catch (...) {
+				ds = "       ";
+			}
+			sp->Strings[i] = ts + " " + ds + " " + get_tkn_r(lbuf, " ");
+		}
+		sp->SaveToFile(SaveDialog1->FileName);
+	}
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::SaveLogActionUpdate(TObject *Sender)
@@ -739,7 +783,7 @@ void __fastcall TDDbgMonFrm::EndOfLogActionExecute(TObject *Sender)
 void __fastcall TDDbgMonFrm::EndOfLogActionUpdate(TObject *Sender)
 {
 	TListBox *lp = (((TComponent*)Sender)->Tag==1)? LogListBox2 : LogListBox1;
-	((TAction*)Sender)->Enabled = (lp->Count>1 && lp->ItemIndex<lp->Count-1); 
+	((TAction*)Sender)->Enabled = (lp->Count>1 && lp->ItemIndex<lp->Count-1);
 }
 //---------------------------------------------------------------------------
 //マッチリストを更新
@@ -856,3 +900,4 @@ void __fastcall TDDbgMonFrm::Splitter3Moved(TObject *Sender)
 	MatchPanel1->Height = MatchPanel2->Height;
 }
 //---------------------------------------------------------------------------
+
