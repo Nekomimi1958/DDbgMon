@@ -686,12 +686,12 @@ void __fastcall TDDbgMonFrm::SaveLogActionExecute(TObject *Sender)
 	if (SaveDialog1->Execute()) {
 		TStringList *sp = (tag==1)? LogBuffer2 : LogBuffer1;
 		for (int i=0; i<sp->Count; i++) {
-			UnicodeString lbuf  = sp->Strings[i];
-			UnicodeString ts    = TTime(get_tkn(lbuf,  " "));
-			UnicodeString lbuf0 = (i>0)? sp->Strings[i - 1] : lbuf;
+			UnicodeString lbuf = sp->Strings[i];
+			UnicodeString ts   = get_tkn(lbuf, " ");
+			UnicodeString ts0  = (i>0)? get_tkn(sp->Strings[i - 1], " ") : ts;
 			UnicodeString ds;
 			try {
-				ds.sprintf(_T("%7.3f"), MilliSecondsBetween(ts, TTime(get_tkn(lbuf0, " ")))/1000.0);
+				ds.sprintf(_T("%7.3f"), MilliSecondsBetween(TTime(ts), TTime(ts0))/1000.0);
 				if (ds.Length()>7) ds = ds.SubString(1, 7);
 			}
 			catch (...) {
