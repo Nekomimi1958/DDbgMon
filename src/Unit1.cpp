@@ -502,11 +502,11 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 	int o_tag = (int)lp->Items->Objects[Index];
 	int xp = Rect.Left + 2;
 
-	//Time
 	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
 				   (IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
 	UnicodeString ts = get_tkn(lbuf, " ");
 	if (TimeRadioGroup->ItemIndex==1 || TimeRadioGroup->ItemIndex==2) {
+		//Time
 		if (TimeRadioGroup->ItemIndex==2) {
 			cv->TextOut(xp, Rect.Top, ts);
 			xp += cv->TextWidth(ts + " ");
@@ -526,6 +526,7 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 		xp += dw;
 	}
 	else {
+		//Time
 		cv->TextOut(xp, Rect.Top, ts);
 		xp += cv->TextWidth(ts + " ");
 	}

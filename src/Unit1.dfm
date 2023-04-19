@@ -290,10 +290,11 @@ object DDbgMonFrm: TDDbgMonFrm
           Width = 259
           Height = 44
           Caption = 'Time Display Mode'
-          Columns = 2
+          Columns = 3
           Items.Strings = (
             'Time'
-            'Delta')
+            'Delta'
+            'Both')
           TabOrder = 3
           OnClick = TimeRadioGroupClick
         end
