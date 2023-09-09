@@ -64,6 +64,7 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 	Em3Edit->Text      = IniFile->ReadString( sct, "EmMatchStr3",	EmptyStr);
 	Em4Edit->Text      = IniFile->ReadString( sct, "EmMatchStr4",	EmptyStr);
 	ExlcudeEdit->Text  = IniFile->ReadString( sct, "ExcludePtn",	"recv msg;attach;detach");
+	DeltaEdit->Text	   = IniFile->ReadString( sct, "SeparateDelta",	"1000");
 
 	SndMatchEdit->Text = IniFile->ReadString( sct, "SoundMatched",	EmptyStr);
 	SndMatchEdit->Hint = SndMatchEdit->Text;
@@ -88,8 +89,8 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 	load_ComboBoxItems(MatchComboBox2,	IniFile, "MatchHistory2",	20);
 	if (MatchComboBox2->Items->Count>0) MatchComboBox2->ItemIndex = 0;
 
-	ImageList1->GetBitmap(0, CapToolImage1->Picture->Bitmap);
-	ImageList1->GetBitmap(0, CapToolImage2->Picture->Bitmap);
+	VirtualImageList2->GetBitmap(0, CapToolImage1->Picture->Bitmap);
+	VirtualImageList2->GetBitmap(0, CapToolImage2->Picture->Bitmap);
 	CapToolImage1->Repaint();
 	CapToolImage2->Repaint();
 
@@ -131,7 +132,8 @@ void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
 	IniFile->WriteString( sct, "EmMatchStr3",	Em3Edit->Text);
 	IniFile->WriteString( sct, "EmMatchStr4",	Em4Edit->Text);
 	IniFile->WriteString( sct, "ExcludePtn",	ExlcudeEdit->Text);
-	IniFile->WriteString(sct, "SoundMatched",	SndMatchEdit->Text);
+	IniFile->WriteString( sct, "SeparateDelta",	DeltaEdit->Text);
+	IniFile->WriteString( sct, "SoundMatched",	SndMatchEdit->Text);
 
 	sct = "Color";
 	IniFile->WriteInteger(sct, "fgEm1",		(int)col_fgEm1);
@@ -406,7 +408,7 @@ void __fastcall TDDbgMonFrm::CapToolImage1MouseDown(TObject *Sender, TMouseButto
 		int tag = ((TComponent*)Sender)->Tag;
 		Screen->Cursor = crTarget;
 		TImage *ip = (tag==1)? CapToolImage2 : CapToolImage1;
-		ImageList1->GetBitmap(1, ip->Picture->Bitmap);
+		VirtualImageList2->GetBitmap(1, ip->Picture->Bitmap);
 		ip->Repaint();
 		Capturing  = true;
 		CaptureTag = tag;
@@ -422,7 +424,7 @@ void __fastcall TDDbgMonFrm::CapToolImage1MouseUp(TObject *Sender, TMouseButton 
 		Capturing = false;
 		Screen->Cursor = crDefault;
 		TImage *ip = (((TComponent*)Sender)->Tag==1)? CapToolImage2 : CapToolImage1;
-		ImageList1->GetBitmap(0, ip->Picture->Bitmap);
+		VirtualImageList2->GetBitmap(0, ip->Picture->Bitmap);
 		ip->Repaint();
 	}
 }
@@ -500,11 +502,15 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 
 	UnicodeString lbuf = lp->Items->Strings[Index];
 	int o_tag = (int)lp->Items->Objects[Index];
-	int xp = Rect.Left + 2;
+	int xp = Rect.Left + SCALED_THIS(2);
 
 	cv->Font->Color = State.Contains(odSelected)? clHighlightText :
 				   (IsMerge() && o_tag!=lp->Tag)? clLtGray : clDkGray;
-	UnicodeString ts = get_tkn(lbuf, " ");
+	UnicodeString ts  = get_tkn(lbuf, " ");
+	UnicodeString ts0 = (Index>0)? get_tkn(lp->Items->Strings[Index - 1], " ") : ts;
+	int   delta = MilliSecondsBetween(TTime(ts), TTime(ts0));
+	bool add_sp = delta > DeltaEdit->Text.ToIntDef(0);
+
 	if (TimeRadioGroup->ItemIndex==1 || TimeRadioGroup->ItemIndex==2) {
 		//Time
 		if (TimeRadioGroup->ItemIndex==2) {
@@ -514,8 +520,7 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 		//Delta
 		UnicodeString ds;
 		try {
-			UnicodeString ts0 = (Index>0)? get_tkn(lp->Items->Strings[Index - 1], " ") : ts;
-			ds.sprintf(_T("%7.3f"), MilliSecondsBetween(TTime(ts), TTime(ts0))/1000.0);
+			ds.sprintf(_T("%7.3f"), delta/1000.0);
 			if (ds.Length()>7) ds = ts.SubString(1, 7);
 		}
 		catch (...) {
@@ -531,7 +536,7 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 		xp += cv->TextWidth(ts + " ");
 	}
 
-	//メッセージ
+	//Message
 	UnicodeString s;
 	if (lp==MatchListBox2 || lp==MatchListBox1 || !IsMerge || o_tag==lp->Tag) s = get_tkn_r(lbuf, " ");
 	UnicodeString ptn = ((lp->Tag==1)? MatchComboBox2 : MatchComboBox1)->Text;
@@ -542,6 +547,15 @@ void __fastcall TDDbgMonFrm::LogListBoxDrawItem(TWinControl *Control, int Index,
 		!ptn_match_str(Em3Edit->Text, s).IsEmpty()? col_fgEm3 :
 		!ptn_match_str(Em4Edit->Text, s).IsEmpty()? col_fgEm4 : clWindowText;
 	cv->TextOut(xp, Rect.Top, s);
+
+	//Saparate Line
+	if (add_sp) {
+		cv->Pen->Color = clDkGray;
+		cv->Pen->Style = psSolid;
+		cv->Pen->Width = 1;
+		cv->MoveTo(Rect.Left, Rect.Top);
+		cv->LineTo(Rect.Right + SCALED_THIS(1), Rect.Top);
+	}
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::LogListBoxClick(TObject *Sender)

@@ -49,11 +49,11 @@ void load_form_pos(
 
 	if (w>0) {
 		int ww = ini_file->ReadInteger(sct, "WinWidth", w);
-		frm->Width  = frm->Scaled? (ww * frm->CurrentPPI / DEFAULT_PPI) : ww;
+		frm->Width  = frm->Scaled? MulDiv(ww, frm->CurrentPPI, DEFAULT_PPI) : ww;
 	}
 	if (h>0) {
 		int hh = ini_file->ReadInteger(sct, "WinHeight", h);
-		frm->Height = frm->Scaled? (hh * frm->CurrentPPI / DEFAULT_PPI) : hh;
+		frm->Height = frm->Scaled? MulDiv(hh, frm->CurrentPPI, DEFAULT_PPI) : hh;
 	}
 
 	if (Screen->MonitorCount==1) {
@@ -79,8 +79,8 @@ void save_form_pos(
 	ini_file->WriteInteger(sct, "WinLeft",	frm->Left);
 	ini_file->WriteInteger(sct, "WinTop",	frm->Top);
 	if (frm->Scaled) {
-		ini_file->WriteInteger(sct, "WinWidth",	frm->Width  * DEFAULT_PPI / frm->CurrentPPI);
-		ini_file->WriteInteger(sct, "WinHeight",frm->Height * DEFAULT_PPI / frm->CurrentPPI);
+		ini_file->WriteInteger(sct, "WinWidth",	MulDiv(frm->Width, DEFAULT_PPI, frm->CurrentPPI));
+		ini_file->WriteInteger(sct, "WinHeight",MulDiv(frm->Height, DEFAULT_PPI, frm->CurrentPPI));
 	}
 	else {
 		ini_file->WriteInteger(sct, "WinWidth",	frm->Width);
@@ -105,8 +105,8 @@ void load_pos_info(
 		int ww = ini_file->ReadInteger(sct, frm->Name + "Width",  w);
 		int hh = ini_file->ReadInteger(sct, frm->Name + "Height", h);
 		if (frm->Scaled) {
-			frm->Width	= ww * frm->CurrentPPI / DEFAULT_PPI;
-			frm->Height = hh * frm->CurrentPPI / DEFAULT_PPI;
+			frm->Width	= ScaledInt(ww, frm);
+			frm->Height = ScaledInt(hh, frm);
 		}
 		else {
 			frm->Width	= ww;
@@ -146,8 +146,8 @@ void save_pos_info(
 
 	if (frm->BorderStyle!=bsDialog) {
 		if (frm->Scaled) {
-			ini_file->WriteInteger(sct, frm->Name + "Width",  frm->Width  * DEFAULT_PPI / frm->CurrentPPI);
-			ini_file->WriteInteger(sct, frm->Name + "Height", frm->Height * DEFAULT_PPI / frm->CurrentPPI);
+			ini_file->WriteInteger(sct, frm->Name + "Width",  UnscaledInt(frm->Width, frm));
+			ini_file->WriteInteger(sct, frm->Name + "Height", UnscaledInt(frm->Height, frm));
 		}
 		else {
 			ini_file->WriteInteger(sct, frm->Name + "Width",  frm->Width);
@@ -166,13 +166,19 @@ void load_GridColWidth(
 {
 	va_list ap;
 	va_start(ap, cnt);
+	bool is_scaled = FormIsScaled(gp);
 	for (int i=0; i<cnt; i++) {
+		int wd  = 0;
 		int arg = va_arg(ap, int);
 		if (i<gp->FixedCols) {
-			gp->ColWidths[i] = arg;
+			wd = arg;
 		}
 		else if (i<gp->ColCount && arg>0 && arg<1200) {
-			gp->ColWidths[i] = ip->ReadInteger(gp->Name, "ColWidth" + IntToStr(i), arg);
+			wd = ip->ReadInteger(gp->Name, "ColWidth" + IntToStr(i), arg);
+		}
+		if (wd>0) {
+			if (is_scaled) wd = ScaledInt(wd, gp);
+			gp->ColWidths[i] = wd;
 		}
 	}
 	va_end(ap);
@@ -184,9 +190,14 @@ void load_GridColDefWidth(
 	int cnt, 			//設定カラム数
 	int wd)				//カラム幅
 {
+	bool is_scaled = FormIsScaled(gp);
 	if (cnt==0) cnt = gp->ColCount;
 	for (int i=0; i<cnt; i++) {
-		if (i<gp->ColCount) gp->ColWidths[i] = ip->ReadInteger(gp->Name, "ColWidth" + IntToStr(i), wd);
+		if (i<gp->ColCount) {
+			int ww = ip->ReadInteger(gp->Name, "ColWidth" + IntToStr(i), wd);
+			if (is_scaled) ww = ScaledInt(ww, gp);
+			gp->ColWidths[i] = ww;
+		}
 	}
 }
 
@@ -197,8 +208,11 @@ void save_GridColWidth(
 	TStringGrid *gp,	//グリッド
 	TIniFile *ip)		//INIファイル
 {
+	bool is_scaled = FormIsScaled(gp);
 	for (int i=0; i<gp->ColCount; i++) {
-		ip->WriteInteger(gp->Name, "ColWidth" + IntToStr(i), gp->ColWidths[i]);
+		int wd = gp->ColWidths[i];
+		if (is_scaled) wd = UnscaledInt(wd, gp);
+		ip->WriteInteger(gp->Name, "ColWidth" + IntToStr(i), wd);
 	}
 }
 

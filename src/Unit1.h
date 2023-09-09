@@ -21,6 +21,9 @@
 #include <Vcl.Menus.hpp>
 #include <Vcl.Buttons.hpp>
 #include <Vcl.ToolWin.hpp>
+#include <Vcl.BaseImageCollection.hpp>
+#include <Vcl.ImageCollection.hpp>
+#include <Vcl.VirtualImageList.hpp>
 
 //---------------------------------------------------------------------------
 class TDDbgMonFrm : public TForm
@@ -64,10 +67,12 @@ __published:	// IDE で管理されるコンポーネント
 	TGroupBox *SndWatchGroupBox;
 	TImage *CapToolImage1;
 	TImage *CapToolImage2;
-	TImageList *ImageList1;
-	TImageList *ImageList2;
+	TImageCollection *ImageCollection1;
+	TImageCollection *ImageCollection2;
+	TLabel *Label1;
 	TLabeledEdit *ClassEdit1;
 	TLabeledEdit *ClassEdit2;
+	TLabeledEdit *DeltaEdit;
 	TLabeledEdit *Em1Edit;
 	TLabeledEdit *Em2Edit;
 	TLabeledEdit *Em3Edit;
@@ -96,6 +101,7 @@ __published:	// IDE で管理されるコンポーネント
 	TPanel *TargetPanel1;
 	TPanel *TargetPanel2;
 	TRadioGroup *ModeRadioGroup;
+	TRadioGroup *TimeRadioGroup;
 	TSaveDialog *SaveDialog1;
 	TSpeedButton *SpeedButton1;
 	TSpeedButton *SpeedButton2;
@@ -125,7 +131,8 @@ __published:	// IDE で管理されるコンポーネント
 	TToolButton *ToolButton15;
 	TToolButton *ToolButton16;
 	TTrackBar *TransBar;
-	TRadioGroup *TimeRadioGroup;
+	TVirtualImageList *VirtualImageList1;
+	TVirtualImageList *VirtualImageList2;
 
 	void __fastcall FormCreate(TObject *Sender);
 	void __fastcall FormShow(TObject *Sender);
