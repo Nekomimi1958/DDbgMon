@@ -36,7 +36,6 @@ object DDbgMonFrm: TDDbgMonFrm
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitHeight = 464
     object PageControl1: TPageControl
       Left = 0
       Top = 0
@@ -46,7 +45,6 @@ object DDbgMonFrm: TDDbgMonFrm
       Align = alClient
       TabOrder = 0
       TabWidth = 100
-      ExplicitHeight = 464
       object MonitorSheet: TTabSheet
         Caption = 'Monitor'
         DesignSize = (
@@ -499,7 +497,6 @@ object DDbgMonFrm: TDDbgMonFrm
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 464
     object Splitter2: TSplitter
       Left = 0
       Top = 352
@@ -525,7 +522,6 @@ object DDbgMonFrm: TDDbgMonFrm
       OnData = LogListBoxData
       OnDataObject = LogListBoxDataObject
       OnDrawItem = LogListBoxDrawItem
-      ExplicitHeight = 298
     end
     object ToolBar1: TToolBar
       Left = 0
@@ -603,7 +599,6 @@ object DDbgMonFrm: TDDbgMonFrm
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitTop = 331
       object MatchListBox1: TListBox
         Left = 0
         Top = 25
@@ -659,7 +654,6 @@ object DDbgMonFrm: TDDbgMonFrm
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitHeight = 464
     object Splitter3: TSplitter
       Left = 0
       Top = 352
@@ -686,7 +680,6 @@ object DDbgMonFrm: TDDbgMonFrm
       OnData = LogListBoxData
       OnDataObject = LogListBoxDataObject
       OnDrawItem = LogListBoxDrawItem
-      ExplicitHeight = 298
     end
     object ToolBar2: TToolBar
       Left = 0
@@ -763,7 +756,6 @@ object DDbgMonFrm: TDDbgMonFrm
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitTop = 331
       object MatchListBox2: TListBox
         Tag = 1
         Left = 0

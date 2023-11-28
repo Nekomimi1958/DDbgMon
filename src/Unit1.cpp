@@ -32,7 +32,6 @@ void __fastcall TDDbgMonFrm::FormCreate(TObject *Sender)
 	LogBuffer1 = new TStringList();
 	LogBuffer2 = new TStringList();
 	LogBufferM = new TStringList();
-	SoundMem   = new TMemoryStream();
 
 	crTarget = (TCursor)6;
 	Screen->Cursors[crTarget] = (HCURSOR)::LoadImage(HInstance, _T("TARGET_TOOL"), IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE);
@@ -68,7 +67,6 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 
 	SndMatchEdit->Text = IniFile->ReadString( sct, "SoundMatched",	EmptyStr);
 	SndMatchEdit->Hint = SndMatchEdit->Text;
-	if (file_exists(SndMatchEdit->Text)) SoundMem->LoadFromFile(SndMatchEdit->Text);
 
 	sct = "Color";
 	col_fgEm1  = (TColor)IniFile->ReadInteger(sct, "fgEm1",	0x33cc33);
@@ -103,12 +101,7 @@ void __fastcall TDDbgMonFrm::FormShow(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::FormCloseQuery(TObject *Sender, bool &CanClose)
 {
-	if (Working) {
-		set_TopMost(this, false);
-		msgbox_WARN("is being monitored...");
-		CanClose = false;
-		set_TopMost(this, TopMostAction->Checked);
-	}
+	if (Working) Working = false;
 }
 //---------------------------------------------------------------------------
 void __fastcall TDDbgMonFrm::FormClose(TObject *Sender, TCloseAction &Action)
@@ -151,7 +144,6 @@ void __fastcall TDDbgMonFrm::FormDestroy(TObject *Sender)
 	delete LogBuffer1;
 	delete LogBuffer2;
 	delete LogBufferM;
-	delete SoundMem;
 	delete IniFile;
 }
 
@@ -178,14 +170,23 @@ void __fastcall TDDbgMonFrm::Timer1Timer(TObject *Sender)
 	if (Working) {
 		if (TargetPID1>0) {
 			HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, TargetPID1);
-			if (hProc) ::CloseHandle(hProc); else ClearID(0);
+			if (hProc) {
+			    DWORD dwExitCode;
+				if (::GetExitCodeProcess(hProc, &dwExitCode) && dwExitCode!=STILL_ACTIVE) ClearID(0);
+				::CloseHandle(hProc); 
+			}
+			else ClearID(1);
 		}
 		if (TargetPID2>0) {
 			HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, TargetPID2);
-			if (hProc) ::CloseHandle(hProc); else ClearID(1);
+			if (hProc) {
+			    DWORD dwExitCode;
+				if (::GetExitCodeProcess(hProc, &dwExitCode) && dwExitCode!=STILL_ACTIVE) ClearID(1);
+				::CloseHandle(hProc);
+			}
+			else ClearID(1);
 		}
 	}
-
 }
 //---------------------------------------------------------------------------
 //タイマー処理	(Interval = 100ms)
@@ -290,13 +291,13 @@ bool __fastcall TDDbgMonFrm::WaitOutputDebugStr(DWORD pid, HWND hWnd, DWORD pid2
 		if (!SetSecurityDescriptorDacl(&sd, TRUE, (PACL)NULL, FALSE))			Abort();
 
 		HANDLE hEvAck = CreateEvent(&sa, FALSE, FALSE, _T("DBWIN_BUFFER_READY"));
-		if (!hEvAck || GetLastError() == ERROR_ALREADY_EXISTS) 		Abort();
+		if (!hEvAck) 	Abort();
 		HANDLE hEvReady = CreateEvent(&sa, FALSE, FALSE, _T("DBWIN_DATA_READY"));
-		if (!hEvReady || GetLastError() == ERROR_ALREADY_EXISTS)	Abort();
+		if (!hEvReady)	Abort();
 		HANDLE hMapFile = CreateFileMapping((HANDLE)0xFFFFFFFF, &sa, PAGE_READWRITE, 0, 4096, _T("DBWIN_BUFFER"));
-		if (!hMapFile) Abort();
+		if (!hMapFile)	Abort();
 		LPVOID pMem = MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 4096);
-		if (!pMem) Abort();
+		if (!pMem)		Abort();
 
 		LPDWORD pPID = (LPDWORD)pMem;
 		LPSTR pSTR = (LPSTR)(pPID + 1);
@@ -398,7 +399,7 @@ void __fastcall TDDbgMonFrm::AddLog(UnicodeString s, int tag, TDateTime t)
 	UnicodeString ptn = (tag==1)? MatchComboBox2->Text : MatchComboBox1->Text;
 	if (!ptn_match_str(ptn, s).IsEmpty()) {
 		(is2? MatchListBox2 : MatchListBox1)->Items->AddObject(lbuf, (TObject*)lp->ItemIndex);
-		if (SoundMem->Size>0) ::sndPlaySound((LPCTSTR)SoundMem->Memory, SND_ASYNC|SND_MEMORY);
+		play_sound(SndMatchEdit->Text);
 	}
 }
 //---------------------------------------------------------------------------
@@ -909,8 +910,7 @@ void __fastcall TDDbgMonFrm::RefSndWatchBtnClick(TObject *Sender)
 	if (OpenDialog1->Execute()) {
 		SndMatchEdit->Text = OpenDialog1->FileName;
 		SndMatchEdit->Hint = SndMatchEdit->Text;
-		SoundMem->LoadFromFile(SndMatchEdit->Text);
-		if (SoundMem->Size>0) ::sndPlaySound((LPCTSTR)SoundMem->Memory, SND_ASYNC|SND_MEMORY);
+		play_sound(SndMatchEdit->Text);
 	}
 }
 //---------------------------------------------------------------------------

@@ -208,8 +208,6 @@ private:	// ƒ†[ƒU[éŒ¾
 
 	int LastTopIndex;
 
-	TMemoryStream *SoundMem;
-
 	void __fastcall SetEditColor(TLabeledEdit *ep)
 	{
 		ep->Color  = ep->Text.IsEmpty()? clLtGray : clWindow;
